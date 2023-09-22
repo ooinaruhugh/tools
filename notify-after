@@ -2,6 +2,12 @@
 # Add here your email address
 #NOTIFY_ADDRESS=
 
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <command-with-arguments>"
+    echo "\tAnd don't forget to set NOTIFY_ADDRESS somewhere"
+    exit 1
+fi
+
 # Execute the command and capture its exit status and output
 eval $@
 exit_status=$?
