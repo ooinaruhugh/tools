@@ -1,0 +1,21 @@
+#!/bin/sh
+# Add here your email address
+#NOTIFY_ADDRESS=
+
+# Execute the command and capture its exit status and output
+eval $@
+exit_status=$?
+
+# Check if the command was successful
+if [ $exit_status -eq 0 ]; then
+    subject="finished successfully"
+    body="completed successfully"
+else
+    subject="failed"
+    body="failed with exit code $exit_status"
+fi
+
+printf "Subject:Command $1 on $(hostname) $subject\nThe command \"$@\" $body at $(date)." | msmtp -a notify $NOTIFY_ADDRESS
+
+# Exit with the same status as the executed command
+exit $exit_status
