@@ -1,0 +1,64 @@
+#!/bin/bash
+set -o pipefail
+
+# Add here your email address
+#NOTIFY_ADDRESS=
+
+WITH_LOG=${WITH_LOG-1}
+
+BOUNDARY="so beautiful :-)"
+output_file=$(mktemp "/tmp/command_output_XXXXX")
+
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <command-with-arguments>"
+    echo "\tAnd don't forget to set NOTIFY_ADDRESS somewhere"
+    exit 1
+fi
+
+# Execute the command and capture its exit status and output
+eval "$@" 2>&1 | tee $output_file
+exit_status=$?
+
+# Check if the command was successful
+if [ $exit_status -eq 0 ]; then
+    subject="finished successfully"
+    if [ $WITH_LOG -eq 2 ]; then
+        body="The command \"$@\" completed successfully"
+    fi
+else
+    subject="failed"
+    if [ $WITH_LOG -eq 2 ]; then
+        body="The command \"$@\" failed with exit code $exit_status"
+    fi
+fi
+
+case $WITH_LOG in
+    2) (
+        printf "To: $NOTIFY_ADDRESS\r\n"
+        printf "Subject: Command $1 on $(hostname) $subject\r\n"
+        printf "Mime-Version: 1.0\r\n"
+        printf "Content-Type: multipart/mixed;\r\n"
+        printf "\tboundary=\"$BOUNDARY\"\r\n"
+        printf "\r\n%s$BOUNDARY\n" --
+        printf "Content-Type: text/plain;\r\n\tcharset=us-ascii\r\n\r\n"
+        printf "$body at $(date).\r\n"
+        printf "\r\n%s$BOUNDARY\r\n" --
+        printf "Content-Type: application/octet-stream;\r\n"
+        printf "Content-Disposition: attachment;\r\n"
+        printf "\tfilename=\"output.log\"\r\n"
+        printf "Content-Transfer-Encoding: base64\r\n\r\n"
+       ) | (cat - && base64 $output_file && echo -e "\r\n--$BOUNDARY") \
+         | msmtp $NOTIFY_ADDRESS
+        ;;
+    1|*) 
+        echo -e "To: $NOTIFY_ADDRESS\nSubject: Command $1 on $(hostname) $subject\n" \
+            | (cat - $output_file) | msmtp $NOTIFY_ADDRESS
+        ;;
+
+esac
+
+# Remove the temporary output file
+rm -f "$output_file"
+
+# Exit with the same status as the executed command
+exit $exit_status
