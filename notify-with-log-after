@@ -51,7 +51,7 @@ case $WITH_LOG in
          | msmtp $NOTIFY_ADDRESS
         ;;
     1|*) 
-        echo -e "To: $NOTIFY_ADDRESS\nSubject: Command $1 on $(hostname) $subject\n" \
+        printf "To: $NOTIFY_ADDRESS\r\nSubject: Command $1 on $(hostname) $subject\r\n" \
             | (cat - $output_file) | msmtp $NOTIFY_ADDRESS
         ;;
 
