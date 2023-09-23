@@ -33,6 +33,25 @@ else
 fi
 
 case $WITH_LOG in
+    3) (
+        printf "To: $NOTIFY_ADDRESS\r\n"
+        printf "Subject: Command $1 on $(hostname) $subject\r\n"
+        printf "Mime-Version: 1.0\r\n"
+        printf "Content-Type: multipart/mixed;\r\n"
+        printf "\tboundary=\"$BOUNDARY\"\r\n"
+        printf "\r\n%s$BOUNDARY\n" --
+        printf "Content-Transfer-Encoding: 7bit\r\n"
+        printf "Content-Type: text/plain;\r\n\tcharset=us-ascii\r\n\r\n"
+        printf "$body at $(date).\r\n"
+        printf "\r\n%s$BOUNDARY\r\n" --
+        printf "Content-Disposition: attachment;\r\n"
+        printf "\tfilename=\"output.log\"\r\n"
+        printf "Content-Type: application/octet-stream;\r\n"
+        printf "\tname=\"output.log\"\r\n"
+        printf "Content-Transfer-Encoding: base64\r\n\r\n"
+       ) | (cat - && base64 $output_file && echo -e "\r\n--$BOUNDARY") \
+         | msmtp $NOTIFY_ADDRESS
+        ;;
     2) (
         printf "To: $NOTIFY_ADDRESS\r\n"
         printf "Subject: Command $1 on $(hostname) $subject\r\n"
@@ -40,16 +59,19 @@ case $WITH_LOG in
         printf "Content-Type: multipart/mixed;\r\n"
         printf "\tboundary=\"$BOUNDARY\"\r\n"
         printf "\r\n%s$BOUNDARY\n" --
+        printf "Content-Transfer-Encoding: 7bit\r\n"
         printf "Content-Type: text/plain;\r\n\tcharset=us-ascii\r\n\r\n"
         printf "$body at $(date).\r\n"
         printf "\r\n%s$BOUNDARY\r\n" --
-        printf "Content-Type: application/octet-stream;\r\n"
         printf "Content-Disposition: attachment;\r\n"
         printf "\tfilename=\"output.log\"\r\n"
-        printf "Content-Transfer-Encoding: base64\r\n\r\n"
-       ) | (cat - && base64 $output_file && echo -e "\r\n--$BOUNDARY") \
+        printf "Content-Type: application/octet-stream;\r\n"
+        printf "\tname=\"output.log\"\r\n"
+        printf "Content-Transfer-Encoding: 7bit\r\n\r\n"
+       ) | (cat - $output_file && echo -e "\r\n--$BOUNDARY") \
          | msmtp $NOTIFY_ADDRESS
         ;;
+
     1|*) 
         printf "To: $NOTIFY_ADDRESS\r\nSubject: Command $1 on $(hostname) $subject\r\n" \
             | (cat - $output_file) | msmtp $NOTIFY_ADDRESS
