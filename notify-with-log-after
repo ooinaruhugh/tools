@@ -4,14 +4,19 @@ set -o pipefail
 # Add here your email address
 #NOTIFY_ADDRESS=
 
-WITH_LOG=${WITH_LOG-1}
+WITH_LOG=${WITH_LOG-4}
 
 BOUNDARY="so beautiful :-)"
-output_file=$(mktemp "/tmp/command_output_XXXXX")
+output_file=$(mktemp "/tmp/command_output_XXXXX.log")
 
 if [ $# -eq 0 ]; then
     echo "Usage: $0 <command-with-arguments>"
     echo "\tAnd don't forget to set NOTIFY_ADDRESS somewhere"
+    exit 1
+fi
+
+if [ -z $NOTIFY_ADDRESS ]; then
+    echo "Please set NOTIFY_ADDRESS"
     exit 1
 fi
 
@@ -22,17 +27,22 @@ exit_status=$?
 # Check if the command was successful
 if [ $exit_status -eq 0 ]; then
     subject="finished successfully"
-    if [ $WITH_LOG -eq 2 ]; then
+    if [ $WITH_LOG -ge 2 ]; then
         body="The command \"$@\" completed successfully"
     fi
 else
     subject="failed"
-    if [ $WITH_LOG -eq 2 ]; then
+    if [ $WITH_LOG -ge 2 ]; then
         body="The command \"$@\" failed with exit code $exit_status"
     fi
 fi
 
 case $WITH_LOG in
+    4) 
+        BODY="$body at $(date)"
+        SUBJECT="Command $1 on $(hostname) $subject"
+        echo "$BODY" | mailx -A $output_file -s "$SUBJECT" $NOTIFY_ADDRESS
+        ;;
     3) (
         printf "To: $NOTIFY_ADDRESS\r\n"
         printf "Subject: Command $1 on $(hostname) $subject\r\n"
